@@ -21,7 +21,8 @@ contract NftTrader is Ownable {
 
     mapping(address => mapping(uint32 => _listing)) private _listings;
     mapping(address => mapping(uint32 => _auction)) private _auctions;
-    mapping(address => mapping(address => mapping(address => mapping(uint32 => _offer)))) private _offers;
+    mapping(address => mapping(address => mapping(address => mapping(uint32 => _offer))))
+        private _offers;
     uint16 _fee;
     uint16 _auctionfee;
     //structure of data for the item listing
@@ -288,7 +289,10 @@ contract NftTrader is Ownable {
     //bidding in auction
     function bid(address contractAddress, uint32 tokenId) public payable {
         _auction storage auction = _auctions[contractAddress][tokenId];
-        require(auction.startDate < block.timestamp, "Auction didn't start yet");
+        require(
+            auction.startDate < block.timestamp,
+            "Auction didn't start yet"
+        );
         require(
             auction.endDate > block.timestamp && auction.ongoing == true,
             "Auction already ended"
@@ -444,18 +448,15 @@ contract NftTrader is Ownable {
         address contractAddress,
         uint32 tokenId
     ) public payable {
-        _offer storage offer=_offers[offerMaker][recipient][contractAddress][tokenId];
+        _offer storage offer = _offers[offerMaker][recipient][contractAddress][
+            tokenId
+        ];
         require(
             msg.sender == offerMaker || msg.sender == recipient,
             "dont have permission for cancel this offer"
         );
-        require(
-            offer.ongoing ==
-                true,
-            "Offer not valid"
-        );
-        offer
-            .ongoing = false;
+        require(offer.ongoing == true, "Offer not valid");
+        offer.ongoing = false;
         if (msg.sender == offerMaker) {
             emit offerCanceled(
                 contractAddress,
@@ -473,9 +474,7 @@ contract NftTrader is Ownable {
                 2
             );
         }
-        payable(offerMaker).transfer(
-            offer.offer
-        );
+        payable(offerMaker).transfer(offer.offer);
     }
 
     function acceptOffer(
@@ -484,8 +483,8 @@ contract NftTrader is Ownable {
         uint32 tokenId
     ) public payable {
         IERC token = IERC(contractAddress);
-        _listing storage nftListing=_listings[contractAddress][tokenId].ongoing;
-        _auction storage auction =_auctions[contractAddress][tokenId];
+        _listing storage nftListing = _listings[contractAddress][tokenId];
+        _auction storage auction = _auctions[contractAddress][tokenId];
         require(
             _offers[offerMaker][msg.sender][contractAddress][tokenId].ongoing ==
                 true,
@@ -508,16 +507,13 @@ contract NftTrader is Ownable {
             }
             if (auction.ongoing == true) {
                 require(
-                    auction.endDate >
-                        block.timestamp,
+                    auction.endDate > block.timestamp,
                     "please settle the active auction you can't accept the offer"
                 );
                 if (auction.bidCount > 0) {
-                    payable(
-                        auction.nftHighestBidder
-                    ).transfer(
-                            auction.nftHighestBid
-                        );
+                    payable(auction.nftHighestBidder).transfer(
+                        auction.nftHighestBid
+                    );
                 }
                 auction.ongoing = false;
                 emit cancelAuction(contractAddress, tokenId, msg.sender);
